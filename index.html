@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Unsplash Photo Search | CPIT-405 Lab 7</title>
+  <meta name="api-origin" content="https://cpit405-search.nfbaryan.workers.dev">
+  <title>Photo Search | CPIT-405 Lab 7</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js"></script>
 </head>
@@ -13,8 +14,7 @@
     <p class="lead">Search Unsplash and choose how the browser makes the request.</p>
     <form id="search-form">
       <div class="fields">
-        <div><label for="query">Search term</label><input id="query" name="query" type="search" placeholder="Mountains, streets, wildlife…" required></div>
-        <div><label for="key">Unsplash Access Key</label><input id="key" name="key" type="password" autocomplete="off" required></div>
+        <div><label for="query">Search term</label><input id="query" name="query" type="search" placeholder="Mountains, streets, wildlife…" maxlength="100" required></div>
         <div><label for="method">Request method</label><select id="method" name="method"><option value="xhr">XMLHttpRequest</option><option value="promise">Fetch with promises</option><option value="async" selected>Fetch with async/await</option></select></div>
       </div>
       <button type="submit">Search photos</button>
@@ -24,3 +24,5 @@
   </main>
 </body>
 </html>
+
+

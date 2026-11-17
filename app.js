@@ -3,37 +3,39 @@ const results = document.querySelector('#results');
 const status = document.querySelector('#status');
 const button = form.querySelector('button');
 
-function errorFor(code) {
-  if (code === 401) return new Error('Check your Unsplash Access Key.');
-  if (code === 403 || code === 429) return new Error('Unsplash denied this request or the request limit was reached.');
-  return new Error('Unsplash returned HTTP ' + code + '.');
+function errorFor(code, body) {
+  if (body?.error) return new Error(body.error);
+  if (code === 429) return new Error('The photo search limit was reached. Try again later.');
+  return new Error('Photo search is temporarily unavailable.');
 }
 
-function xhrSearch(url, authorization) {
+function xhrSearch(url) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
-    xhr.setRequestHeader('Authorization', authorization);
     xhr.responseType = 'json';
     xhr.timeout = 12000;
     xhr.onload = () => xhr.status >= 200 && xhr.status < 300
-      ? resolve(xhr.response) : reject(errorFor(xhr.status));
-    xhr.onerror = xhr.ontimeout = () => reject(new Error('Unable to reach Unsplash.'));
+      ? resolve(xhr.response) : reject(errorFor(xhr.status, xhr.response));
+    xhr.onerror = xhr.ontimeout = () => reject(new Error('Unable to reach photo search.'));
     xhr.send();
   });
 }
 
-function promiseSearch(url, authorization) {
-  return fetch(url, { headers: { Authorization: authorization } }).then(response => {
-    if (!response.ok) throw errorFor(response.status);
-    return response.json();
-  });
+function promiseSearch(url) {
+  return fetch(url).then(response =>
+    response.json().then(data => {
+      if (!response.ok) throw errorFor(response.status, data);
+      return data;
+    })
+  );
 }
 
-async function asyncSearch(url, authorization) {
-  const response = await fetch(url, { headers: { Authorization: authorization } });
-  if (!response.ok) throw errorFor(response.status);
-  return await response.json();
+async function asyncSearch(url) {
+  const response = await fetch(url);
+  const data = await response.json();
+  if (!response.ok) throw errorFor(response.status, data);
+  return data;
 }
 
 const methods = { xhr: xhrSearch, promise: promiseSearch, async: asyncSearch };
@@ -69,15 +71,15 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   const data = new FormData(form);
   const query = data.get('query').trim();
-  const key = data.get('key').trim();
-  if (!query || !key) { status.textContent = 'Enter a search term and an Access Key.'; return; }
-  const url = new URL('https://api.unsplash.com/search/photos');
-  url.search = new URLSearchParams({ query, per_page: '12' });
+  if (!query) { status.textContent = 'Enter a search term.'; return; }
+  const apiOrigin = document.querySelector('meta[name="api-origin"]')?.content || location.origin;
+  const url = new URL('/api/photos', apiOrigin);
+  url.search = new URLSearchParams({ query });
   results.replaceChildren();
   status.textContent = 'Searching…';
   button.disabled = true;
   try {
-    const data = await methods[form.elements.method.value](url, 'Client-ID ' + key);
+    const data = await methods[form.elements.method.value](url);
     if (!Array.isArray(data?.results)) throw new Error('Unsplash returned an unexpected response.');
     results.replaceChildren(...data.results.map(photoCard));
     status.textContent = data.results.length ? data.results.length + ' photos found.' : 'No photos found.';
